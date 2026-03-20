@@ -1,0 +1,200 @@
+# D-12 Fee Tracker — Setup Guide
+# Follow these steps ONE BY ONE. Take your time.
+
+=======================================================
+WHAT YOU WILL HAVE AT THE END:
+- A secure web app link you share with your 2 supervisors
+- Your CSV safely stored in a private GitHub repo
+- When you update the CSV, supervisors just refresh the app
+=======================================================
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 1 — Check Node.js is installed on your laptop
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Open Command Prompt on Windows
+   (Press Windows key, type "cmd", press Enter)
+
+2. Type this and press Enter:
+   node --version
+
+3. If you see something like "v18.0.0" or higher → ✅ You're good
+   If you see "'node' is not recognized" → Go to https://nodejs.org
+   and download the "LTS" version, install it, then restart cmd.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 2 — Create a Private GitHub Repository for the CSV
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go to https://github.com and log in
+2. Click the "+" icon (top right) → "New repository"
+3. Fill in:
+   - Repository name: d12-data  (or any name you like)
+   - Description: D-12 sector fee data
+   - Visibility: ✅ PRIVATE  ← Very important!
+4. Click "Create repository"
+5. Click "uploading an existing file"
+6. Drag your CSV file (residents_data.csv) onto the page
+7. Scroll down, click "Commit changes"
+
+✅ Your CSV is now safely stored privately on GitHub.
+
+NOTE: Every time you update the CSV in future:
+- Go to this repo → click the CSV file → click the pencil icon
+  OR just upload the new file (it will replace the old one)
+- Supervisors refresh the app → they see new data instantly
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 3 — Create a GitHub Personal Access Token (Secret Key)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This is a password that lets the app read your private CSV.
+It never shows to supervisors — only Vercel holds it securely.
+
+1. On GitHub, click your profile photo (top right) → Settings
+2. Scroll all the way down in the left menu → "Developer settings"
+3. Click "Personal access tokens" → "Tokens (classic)"
+4. Click "Generate new token" → "Generate new token (classic)"
+5. Fill in:
+   - Note: D12 Fee Tracker
+   - Expiration: "No expiration"  (so it doesn't stop working)
+   - Scopes: Tick the box next to "repo" (this covers private repos)
+6. Scroll down → Click "Generate token"
+7. ⚠️ COPY THE TOKEN NOW — it will not show again!
+   It looks like: ghp_xxxxxxxxxxxxxxxxxxxx
+   Paste it in Notepad temporarily.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 4 — Put the App Code on GitHub
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Extract the ZIP file you downloaded (d12-fee-tracker.zip)
+   to a folder on your Desktop
+
+2. Open VS Code
+   File → Open Folder → select the d12-fee-tracker folder
+
+3. Open the Terminal in VS Code:
+   Menu: Terminal → New Terminal
+
+4. Type these commands one by one, pressing Enter after each:
+
+   npm install
+
+   (Wait for it to finish — may take 1-2 minutes)
+
+5. Create a new GitHub repository for the APP CODE:
+   - Go to github.com → "+" → New repository
+   - Name: d12-fee-tracker
+   - Visibility: Public is fine (the secret token is NOT in the code)
+   - Click "Create repository"
+
+6. GitHub will show you commands. In VS Code terminal, type:
+
+   git init
+   git add .
+   git commit -m "Initial commit"
+   git branch -M main
+   git remote add origin https://github.com/YOUR_USERNAME/d12-fee-tracker.git
+   git push -u origin main
+
+   (Replace YOUR_USERNAME with your actual GitHub username)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 5 — Deploy on Vercel
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go to https://vercel.com and log in with your GitHub account
+
+2. Click "Add New..." → "Project"
+
+3. Find "d12-fee-tracker" in the list → Click "Import"
+
+4. Leave all settings as default → Click "Deploy"
+   (It will fail at first — that's OK, we need to add secrets first)
+
+5. Go to your project on Vercel → "Settings" tab → "Environment Variables"
+
+6. Add these 4 variables one by one (click "Add" after each):
+
+   NAME:  GITHUB_TOKEN
+   VALUE: (paste your token from Step 3 — starts with ghp_)
+
+   NAME:  GITHUB_USERNAME
+   VALUE: (your GitHub username)
+
+   NAME:  GITHUB_REPO
+   VALUE: d12-data  (the name you gave the CSV repo in Step 2)
+
+   NAME:  GITHUB_FILE_PATH
+   VALUE: residents_data.csv
+
+7. After adding all 4, go to "Deployments" tab
+   Click the 3 dots next to the latest deployment → "Redeploy"
+
+8. Wait ~1 minute → Click "Visit" when done
+
+✅ Your app is live! Copy the link (e.g. d12-fee-tracker.vercel.app)
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP 6 — Share with Supervisors
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Send the Vercel link to your 2 supervisors via WhatsApp
+
+2. Tell them:
+   "Open this link on your phone browser.
+    Tap the sector → street → house to see payment history."
+
+3. Supervisors can add the link to their home screen:
+   - On Android: Open link in Chrome → tap 3 dots → "Add to Home Screen"
+   - Now it works like an app icon on their phone!
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO UPDATE THE CSV IN FUTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. Go to github.com → your "d12-data" repo
+2. Click on residents_data.csv
+3. Click the upload icon (or pencil to edit)
+4. Upload your new CSV file
+5. Click "Commit changes"
+
+Done! Supervisors just refresh the app — they see new data.
+No need to redeploy or touch Vercel at all.
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Problem: App shows "Server configuration missing"
+→ Check all 4 environment variables in Vercel Settings are correct
+→ Redeploy after fixing
+
+Problem: App shows "GitHub error: 404"
+→ Check GITHUB_REPO name matches exactly (case-sensitive)
+→ Check GITHUB_FILE_PATH matches your CSV filename exactly
+
+Problem: App shows "GitHub error: 401"
+→ Your token is wrong or expired
+→ Create a new token (Step 3) and update in Vercel Settings
+
+Problem: npm install fails
+→ Make sure Node.js is installed (Step 1)
+→ Try: npm install --legacy-peer-deps
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+You can paste any error message to Claude and ask for help.
+Claude will guide you through fixing it step by step.

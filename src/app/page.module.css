@@ -1,0 +1,143 @@
+.homeWrap {
+  padding: 0 0 60px;
+}
+
+.heroBar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 20px 20px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, #161b22 0%, var(--bg) 100%);
+}
+
+.heroIcon { font-size: 36px; }
+
+.heroTitle {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.heroSub {
+  font-size: 12px;
+  color: var(--text2);
+  margin-top: 3px;
+}
+
+.sectionLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text2);
+  padding: 20px 20px 10px;
+}
+
+.sectorGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.sectorCard {
+  border-radius: var(--radius);
+  border: 1.5px solid var(--border);
+  padding: 20px 16px;
+  display: block;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
+}
+
+.sectorCard::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.sectorCard:hover, .sectorCard:active {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59,130,246,0.2);
+}
+
+.sectorCard:hover::after { opacity: 1; }
+
+.sectorCardInner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sectorIcon { font-size: 26px; margin-bottom: 6px; }
+
+.sectorName {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sectorMeta {
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.footer {
+  text-align: center;
+  padding: 32px 20px 0;
+  font-size: 11px;
+  color: var(--border);
+  letter-spacing: 0.08em;
+  font-family: var(--mono);
+}
+
+/* Loading / Error states */
+.centered {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh;
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loadingText {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.loadingSubText {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.errorIcon { font-size: 40px; margin-bottom: 12px; }
+
+.errorText {
+  font-size: 14px;
+  color: var(--red);
+  max-width: 280px;
+}
