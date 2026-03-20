@@ -1,7 +1,8 @@
 'use client'
 
 import { use } from 'react'
-import { DataProvider, useData, HouseData } from '../../../context'
+import { DataProvider, useData } from '../../../context'
+import type { HouseData } from '../../../context'
 import { NavHeader } from '../../../components'
 import styles from './page.module.css'
 
