@@ -1,9 +1,9 @@
 'use client'
 
 import { use } from 'react'
-import { DataProvider, useData } from '../../../context'
-import type { HouseData } from '../../../context'
-import { NavHeader } from '../../../components'
+import { DataProvider, useData } from '../../context'
+import type { HouseData } from '../../context'
+import { NavHeader } from '../../components'
 import styles from './page.module.css'
 
 const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
