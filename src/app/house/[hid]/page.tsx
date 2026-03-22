@@ -6,18 +6,41 @@ import type { HouseData } from '../../context'
 import { NavHeader } from '../../components'
 import styles from './page.module.css'
 
+// Calendar year quarters
 const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
 const Q_LABELS: Record<string, string> = {
-  Q1: 'Jul–Sep', Q2: 'Oct–Dec', Q3: 'Jan–Mar', Q4: 'Apr–Jun'
+  Q1: 'Jan–Mar', Q2: 'Apr–Jun', Q3: 'Jul–Sep', Q4: 'Oct–Dec'
 }
 const EXPECTED: Record<number, number> = { 0: 1000, 1: 1000, 2: 500 }
 
-type CellStatus = 'paid' | 'partial' | 'missed' | 'na'
+function quarterToNum(year: number, q: string): number {
+  return year * 4 + parseInt(q[1])
+}
 
-function getCellStatus(amount: number | undefined, expectedFee: number, isConstructed: boolean): CellStatus {
+type CellStatus = 'paid' | 'partial' | 'missed' | 'na' | 'before'
+
+function getCellStatus(
+  amount: number | undefined,
+  expectedFee: number,
+  isConstructed: boolean,
+  year: number,
+  quarter: string,
+  firstYear: number | null,
+  firstQuarter: string | null
+): CellStatus {
   if (!isConstructed) return 'na'
-  if (amount === undefined || amount === null) return 'missed'
-  if (amount === 0) return 'missed'
+
+  // Before first payment period — don't count as missed
+  if (firstYear !== null && firstQuarter !== null) {
+    if (quarterToNum(year, quarter) < quarterToNum(firstYear, firstQuarter)) {
+      return 'before'
+    }
+  } else {
+    // No payments ever made — don't show as missed
+    return 'na'
+  }
+
+  if (amount === undefined || amount === null || amount === 0) return 'missed'
   if (amount >= expectedFee) return 'paid'
   return 'partial'
 }
@@ -36,18 +59,17 @@ function DetailScreen({ hid }: { hid: string }) {
   const payments      = h.payments ?? {}
   const years         = Object.keys(payments).map(Number).sort()
 
-  // Extend range to cover full history
-  const minYear = Math.min(...years, 2020)
+  const minYear = h.firstPaymentYear ?? (years.length ? Math.min(...years) : new Date().getFullYear())
   const maxYear = Math.max(...years, new Date().getFullYear())
   const allYears: number[] = []
   for (let y = minYear; y <= maxYear; y++) allYears.push(y)
 
-  // Summary counts
+  // Summary counts — only after first payment
   let paid = 0, partial = 0, missed = 0, totalPaid = 0
   allYears.forEach(y => {
     QUARTERS.forEach(q => {
       const amt = payments[String(y)]?.[q]
-      const status = getCellStatus(amt, expectedFee, isConstructed)
+      const status = getCellStatus(amt, expectedFee, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter)
       if (status === 'paid')    { paid++;    totalPaid += amt! }
       if (status === 'partial') { partial++; totalPaid += amt! }
       if (status === 'missed')  { missed++ }
@@ -55,10 +77,9 @@ function DetailScreen({ hid }: { hid: string }) {
   })
 
   const nameDisplay = h.name && h.name !== 'nan' ? h.name : '—'
-  const cellDisplay = h.cell && h.cell !== 'nan' ? h.cell : '—'
-  const statusCls   = h.status === 'Plot' ? styles.badgePlot
-                    : h.status === 'Constructed' ? styles.badgeBuilt
-                    : styles.badgeUnder
+  const statusCls = h.status === 'Plot' ? styles.badgePlot
+                  : h.status === 'Constructed' ? styles.badgeBuilt
+                  : styles.badgeUnder
 
   return (
     <>
@@ -68,14 +89,13 @@ function DetailScreen({ hid }: { hid: string }) {
         backHref={`/houses/${encodeURIComponent(h.sector)}/${encodeURIComponent(h.street)}`}
         crumbs={[
           { label: h.sector, href: `/streets/${encodeURIComponent(h.sector)}` },
-          { label: `St. ${h.street}`, href: `/houses/${encodeURIComponent(h.sector)}/${encodeURIComponent(h.street)}` },
-          { label: `H. ${h.house}` }
+          { label: `St.${h.street}`, href: `/houses/${encodeURIComponent(h.sector)}/${encodeURIComponent(h.street)}` },
+          { label: `H.${h.house}` }
         ]}
       />
 
       <div className={styles.content}>
-
-        {/* House Info Card */}
+        {/* House Info Card — NO phone number */}
         <div className={styles.infoCard}>
           <div className={styles.infoTop}>
             <div>
@@ -85,19 +105,18 @@ function DetailScreen({ hid }: { hid: string }) {
             <span className={`${styles.badge} ${statusCls}`}>{h.status}</span>
           </div>
           <div className={styles.metaRow}>
-            <div className={styles.metaItem}><span>👤</span> {nameDisplay}</div>
-            {cellDisplay !== '—' && <div className={styles.metaItem}><span>📱</span> {cellDisplay}</div>}
-            <div className={styles.catTag}>Cat {h.cat}</div>
+            <div className={styles.metaItem}>👤 {nameDisplay}</div>
+            <span className={styles.catTag}>Cat {h.cat}</span>
           </div>
           {isConstructed && (
             <div className={styles.expectedFee}>
-              Expected fee: <strong>Rs. {expectedFee.toLocaleString()} / quarter</strong>
+              Expected: <strong>Rs. {expectedFee.toLocaleString()} / quarter</strong>
             </div>
           )}
         </div>
 
-        {/* Summary Strip */}
-        {isConstructed && (
+        {/* Summary */}
+        {isConstructed && h.firstPaymentYear && (
           <div className={styles.summaryStrip}>
             <div className={styles.summaryItem}>
               <div className={styles.summaryVal} style={{ color: 'var(--green)' }}>{paid}</div>
@@ -116,7 +135,7 @@ function DetailScreen({ hid }: { hid: string }) {
             <div className={styles.summaryDivider} />
             <div className={styles.summaryItem}>
               <div className={styles.summaryVal} style={{ color: 'var(--accent)' }}>
-                {totalPaid >= 1000 ? `${Math.round(totalPaid / 1000)}k` : totalPaid}
+                {totalPaid >= 1000 ? `${Math.round(totalPaid/1000)}k` : totalPaid}
               </div>
               <div className={styles.summaryLbl}>Total Rs.</div>
             </div>
@@ -126,10 +145,10 @@ function DetailScreen({ hid }: { hid: string }) {
         {/* Legend */}
         {isConstructed && (
           <div className={styles.legend}>
-            <div className={styles.legendItem}><span className={styles.dot} style={{ background: 'var(--green)' }} />Paid</div>
-            <div className={styles.legendItem}><span className={styles.dot} style={{ background: 'var(--yellow)' }} />Partial</div>
-            <div className={styles.legendItem}><span className={styles.dot} style={{ background: 'var(--red)' }} />Missed</div>
-            <div className={styles.legendItem}><span className={styles.dot} style={{ background: 'var(--border)' }} />N/A</div>
+            <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--green)'}}/>Paid</div>
+            <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--yellow)'}}/>Partial</div>
+            <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--red)'}}/>Missed</div>
+            <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--border)'}}/>N/A</div>
           </div>
         )}
 
@@ -141,8 +160,7 @@ function DetailScreen({ hid }: { hid: string }) {
                 <th className={styles.thYear}>Year</th>
                 {QUARTERS.map(q => (
                   <th key={q} className={styles.th}>
-                    {q}<br />
-                    <span className={styles.thSub}>{Q_LABELS[q]}</span>
+                    {q}<br/><span className={styles.thSub}>{Q_LABELS[q]}</span>
                   </th>
                 ))}
               </tr>
@@ -153,13 +171,14 @@ function DetailScreen({ hid }: { hid: string }) {
                   <td className={styles.tdYear}>{y}</td>
                   {QUARTERS.map(q => {
                     const amt    = payments[String(y)]?.[q]
-                    const status = getCellStatus(amt, expectedFee, isConstructed)
+                    const status = getCellStatus(amt, expectedFee, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter)
                     return (
                       <td key={q} className={`${styles.td} ${styles[status]}`}>
-                        {status === 'paid'    && <>{amt!.toLocaleString()}</>}
-                        {status === 'partial' && <>{amt!.toLocaleString()}</>}
-                        {status === 'missed'  && <>✗{amt !== undefined && amt !== null ? <><br/><span className={styles.zeroLabel}>{amt}</span></> : ''}</>}
-                        {status === 'na'      && <>—</>}
+                        {status === 'paid'    && amt!.toLocaleString()}
+                        {status === 'partial' && amt!.toLocaleString()}
+                        {status === 'missed'  && '✗'}
+                        {status === 'na'      && '—'}
+                        {status === 'before'  && '·'}
                       </td>
                     )
                   })}
@@ -170,9 +189,11 @@ function DetailScreen({ hid }: { hid: string }) {
         </div>
 
         {h.status === 'Plot' && (
-          <p className={styles.plotNote}>⚠️ This is a plot (no structure). Fee collection does not apply.</p>
+          <p className={styles.plotNote}>⚠️ Plot only — fee collection does not apply.</p>
         )}
-
+        {isConstructed && !h.firstPaymentYear && (
+          <p className={styles.plotNote}>ℹ️ No payments recorded for this property yet.</p>
+        )}
       </div>
     </>
   )

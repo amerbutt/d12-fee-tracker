@@ -2,7 +2,8 @@
 
 import { use, useState } from 'react'
 import Link from 'next/link'
-import { DataProvider, useData, HouseData } from '../../../context'
+import { DataProvider, useData } from '../../../context'
+import type { HouseData } from '../../../context'
 import { NavHeader, SearchBar, EmptyState } from '../../../components'
 import styles from './page.module.css'
 
@@ -21,7 +22,7 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
 
   const houseIds = Object.entries(data!.houses)
     .filter(([, h]) => h.sector === sector && h.street === street)
-    .map(([hid, h]) => ({ hid, ...h }))
+    .map(([id, h]) => ({ id, ...h }))
     .sort((a, b) => {
       const na = parseFloat(a.house), nb = parseFloat(b.house)
       return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.house.localeCompare(b.house)
@@ -56,8 +57,8 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
               const nameDisplay = h.name && h.name !== 'nan' ? h.name : '—'
               return (
                 <Link
-                  key={h.hid}
-                  href={`/house/${encodeURIComponent(h.hid)}`}
+                  key={h.id}
+                  href={`/house/${encodeURIComponent(h.id)}`}
                   className={styles.listItem}
                 >
                   <div className={styles.listLeft}>

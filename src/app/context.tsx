@@ -8,15 +8,17 @@ export type HouseData = {
   street: string
   house: string
   name: string
-  cell: string
   cat: number
   status: string
+  firstPaymentYear: number | null
+  firstPaymentQuarter: string | null
   payments: Record<string, Record<string, number>>
 }
 
 export type AppData = {
   sectors: Record<string, Record<string, string[]>>
   houses: Record<string, HouseData>
+  lastUpdated: number
 }
 
 type DataContextType = {
