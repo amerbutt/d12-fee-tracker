@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { DataProvider, useData } from '../../../context'
 import type { HouseData } from '../../../context'
@@ -8,9 +8,9 @@ import { NavHeader, SearchBar, EmptyState } from '../../../components'
 import styles from './page.module.css'
 
 function statusBadge(status: string) {
-  if (status === 'Plot')        return { label: 'Plot',        cls: styles.badgePlot }
-  if (status === 'Constructed') return { label: 'Built',       cls: styles.badgeBuilt }
-  return                               { label: 'Under Const', cls: styles.badgeUnder }
+  if (status === 'Plot')        return { label: 'Plot',  cls: styles.badgePlot }
+  if (status === 'Constructed') return { label: 'Built', cls: styles.badgeBuilt }
+  return                               { label: 'U/C',   cls: styles.badgeUnder }
 }
 
 function HousesScreen({ sector, street }: { sector: string; street: string }) {
@@ -20,7 +20,7 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
   if (loading) return <div className={styles.loading}><div className={styles.spinner} /></div>
   if (error)   return <div className={styles.loading}><p style={{color:'var(--red)'}}>{error}</p></div>
 
-  const houseIds = Object.entries(data!.houses)
+  const houses = Object.entries(data?.houses ?? {})
     .filter(([, h]) => h.sector === sector && h.street === street)
     .map(([hid, h]) => ({ hid, ...h }))
     .sort((a, b) => {
@@ -28,7 +28,7 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
       return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.house.localeCompare(b.house)
     })
 
-  const filtered = houseIds.filter(h =>
+  const filtered = houses.filter(h =>
     !search ||
     h.house.toLowerCase().includes(search.toLowerCase()) ||
     h.name.toLowerCase().includes(search.toLowerCase())
@@ -46,10 +46,8 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
         ]}
       />
       <SearchBar placeholder="Search house or name..." value={search} onChange={setSearch} />
-
       <div className={styles.content}>
         <p className={styles.sectionLabel}>{filtered.length} Houses on Street {street}</p>
-
         {filtered.length === 0
           ? <EmptyState message="No houses match your search" />
           : filtered.map(h => {
@@ -81,11 +79,13 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
   )
 }
 
-export default function HousesPage({ params }: { params: Promise<{ sector: string; street: string }> }) {
-  const { sector, street } = use(params)
+export default function HousesPage({ params }: { params: { sector: string; street: string } }) {
   return (
     <DataProvider>
-      <HousesScreen sector={decodeURIComponent(sector)} street={decodeURIComponent(street)} />
+      <HousesScreen
+        sector={decodeURIComponent(params.sector)}
+        street={decodeURIComponent(params.street)}
+      />
     </DataProvider>
   )
 }

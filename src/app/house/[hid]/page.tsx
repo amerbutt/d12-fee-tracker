@@ -199,8 +199,8 @@ function DetailScreen({ hid }: { hid: string }) {
   )
 }
 
-export default function HouseDetailPage({ params }: { params: Promise<{ hid: string }> }) {
-  const { hid } = use(params)
+export default function HouseDetailPage({ params }: { params: { hid: string } }) {
+  const hid = params.hid
   return (
     <DataProvider>
       <DetailScreen hid={decodeURIComponent(hid)} />
