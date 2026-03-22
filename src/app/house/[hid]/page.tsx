@@ -1,12 +1,10 @@
 'use client'
 
-import { use } from 'react'
 import { DataProvider, useData } from '../../context'
-import type { HouseData } from '../../context'
+import type { HouseData, QuarterData } from '../../context'
 import { NavHeader } from '../../components'
 import styles from './page.module.css'
 
-// Calendar year quarters
 const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
 const Q_LABELS: Record<string, string> = {
   Q1: 'Jan–Mar', Q2: 'Apr–Jun', Q3: 'Jul–Sep', Q4: 'Oct–Dec'
@@ -20,8 +18,7 @@ function quarterToNum(year: number, q: string): number {
 type CellStatus = 'paid' | 'partial' | 'missed' | 'na' | 'before'
 
 function getCellStatus(
-  amount: number | undefined,
-  expectedFee: number,
+  qData: QuarterData | undefined,
   isConstructed: boolean,
   year: number,
   quarter: string,
@@ -30,19 +27,23 @@ function getCellStatus(
 ): CellStatus {
   if (!isConstructed) return 'na'
 
-  // Before first payment period — don't count as missed
+  // Before first payment period
   if (firstYear !== null && firstQuarter !== null) {
     if (quarterToNum(year, quarter) < quarterToNum(firstYear, firstQuarter)) {
       return 'before'
     }
   } else {
-    // No payments ever made — don't show as missed
-    return 'na'
+    return 'na' // No payments ever
   }
 
-  if (amount === undefined || amount === null || amount === 0) return 'missed'
-  if (amount >= expectedFee) return 'paid'
-  return 'partial'
+  if (!qData || qData.months.length === 0) return 'missed'
+
+  const hasZeroMonth = qData.months.some(m => m === 0)
+  const allZero = qData.months.every(m => m === 0)
+
+  if (allZero) return 'missed'
+  if (hasZeroMonth) return 'partial'  // Some months paid, some missed → ORANGE
+  return 'paid'
 }
 
 function DetailScreen({ hid }: { hid: string }) {
@@ -64,14 +65,14 @@ function DetailScreen({ hid }: { hid: string }) {
   const allYears: number[] = []
   for (let y = minYear; y <= maxYear; y++) allYears.push(y)
 
-  // Summary counts — only after first payment
+  // Summary counts
   let paid = 0, partial = 0, missed = 0, totalPaid = 0
   allYears.forEach(y => {
     QUARTERS.forEach(q => {
-      const amt = payments[String(y)]?.[q]
-      const status = getCellStatus(amt, expectedFee, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter)
-      if (status === 'paid')    { paid++;    totalPaid += amt! }
-      if (status === 'partial') { partial++; totalPaid += amt! }
+      const qData = payments[String(y)]?.[q]
+      const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter)
+      if (status === 'paid')    { paid++;    totalPaid += qData!.total }
+      if (status === 'partial') { partial++; totalPaid += qData!.total }
       if (status === 'missed')  { missed++ }
     })
   })
@@ -95,7 +96,7 @@ function DetailScreen({ hid }: { hid: string }) {
       />
 
       <div className={styles.content}>
-        {/* House Info Card — NO phone number */}
+        {/* House Info Card */}
         <div className={styles.infoCard}>
           <div className={styles.infoTop}>
             <div>
@@ -170,12 +171,13 @@ function DetailScreen({ hid }: { hid: string }) {
                 <tr key={y}>
                   <td className={styles.tdYear}>{y}</td>
                   {QUARTERS.map(q => {
-                    const amt    = payments[String(y)]?.[q]
-                    const status = getCellStatus(amt, expectedFee, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter)
+                    const qData  = payments[String(y)]?.[q]
+                    const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter)
+                    const display = qData?.total ?? 0
                     return (
                       <td key={q} className={`${styles.td} ${styles[status]}`}>
-                        {status === 'paid'    && amt!.toLocaleString()}
-                        {status === 'partial' && amt!.toLocaleString()}
+                        {status === 'paid'    && display.toLocaleString()}
+                        {status === 'partial' && display.toLocaleString()}
                         {status === 'missed'  && '✗'}
                         {status === 'na'      && '—'}
                         {status === 'before'  && '·'}
@@ -200,10 +202,9 @@ function DetailScreen({ hid }: { hid: string }) {
 }
 
 export default function HouseDetailPage({ params }: { params: { hid: string } }) {
-  const hid = params.hid
   return (
     <DataProvider>
-      <DetailScreen hid={decodeURIComponent(hid)} />
+      <DetailScreen hid={decodeURIComponent(params.hid)} />
     </DataProvider>
   )
 }

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import Papa from 'papaparse'
 
-// ── Calendar-year quarters ─────────────────────────────────────────────────
 const MONTH_MAP: Record<string, number> = {
   Jan:1, Feb:2, Mar:3, Apr:4, May:5, Jun:6,
   Jul:7, Aug:8, Sept:9, Sep:9, Oct:10, Nov:11, Dec:12
@@ -29,14 +28,13 @@ function quarterToNum(year: number, q: string): number {
   return year * 4 + parseInt(q[1])
 }
 
-// ── Server-side cache (5 minutes) ──────────────────────────────────────────
+// Cache 5 minutes
 let cache: unknown = null
 let cacheTime = 0
 const CACHE_MS = 5 * 60 * 1000
 
 export async function GET() {
   try {
-    // Return cached data if fresh
     if (cache && Date.now() - cacheTime < CACHE_MS) {
       return NextResponse.json(cache)
     }
@@ -50,7 +48,6 @@ export async function GET() {
       return NextResponse.json({ error: 'Server configuration missing' }, { status: 500 })
     }
 
-    // Fetch raw CSV from GitHub
     const url = `https://api.github.com/repos/${username}/${repo}/contents/${filePath}`
     const ghRes = await fetch(url, {
       headers: {
@@ -67,18 +64,23 @@ export async function GET() {
 
     const csvText = await ghRes.text()
 
-    // Use papaparse — handles multiline quoted fields correctly
+    // papaparse handles multiline quoted fields correctly
     const parsed = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
       transformHeader: (h: string) => h.trim(),
     })
 
+    type QuarterData = {
+      total: number        // sum of all months in quarter
+      months: number[]     // individual monthly amounts
+    }
+
     type HouseData = {
       id: string; sector: string; street: string; house: string
       name: string; cat: number; status: string
       firstPaymentYear: number | null; firstPaymentQuarter: string | null
-      payments: Record<string, Record<string, number>>
+      payments: Record<string, Record<string, QuarterData>>
     }
 
     const housesMap: Record<string, HouseData> = {}
@@ -96,9 +98,9 @@ export async function GET() {
       const name   = row['Name']?.trim() ?? ''
 
       if (!sector || !street || !house || !rid || !date) continue
-      const parsed2 = parseDate(date)
-      if (!parsed2) continue
-      const { year, month } = parsed2
+      const parsedDate = parseDate(date)
+      if (!parsedDate) continue
+      const { year, month } = parsedDate
       const quarter = getCalendarQuarter(month)
       if (!quarter) continue
 
@@ -115,8 +117,11 @@ export async function GET() {
 
       const yr = String(year)
       if (!housesMap[rid].payments[yr]) housesMap[rid].payments[yr] = {}
-      housesMap[rid].payments[yr][quarter] =
-        (housesMap[rid].payments[yr][quarter] ?? 0) + amt
+      if (!housesMap[rid].payments[yr][quarter]) {
+        housesMap[rid].payments[yr][quarter] = { total: 0, months: [] }
+      }
+      housesMap[rid].payments[yr][quarter].total += amt
+      housesMap[rid].payments[yr][quarter].months.push(amt)
 
       rawPayments[rid].push({ yr: year, q: quarter, amount: amt })
     }
