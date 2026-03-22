@@ -22,7 +22,7 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
 
   const houseIds = Object.entries(data!.houses)
     .filter(([, h]) => h.sector === sector && h.street === street)
-    .map(([id, h]) => ({ id, ...h }))
+    .map(([hid, h]) => ({ hid, ...h }))
     .sort((a, b) => {
       const na = parseFloat(a.house), nb = parseFloat(b.house)
       return (!isNaN(na) && !isNaN(nb)) ? na - nb : a.house.localeCompare(b.house)
@@ -57,8 +57,8 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
               const nameDisplay = h.name && h.name !== 'nan' ? h.name : '—'
               return (
                 <Link
-                  key={h.id}
-                  href={`/house/${encodeURIComponent(h.id)}`}
+                  key={h.hid}
+                  href={`/house/${encodeURIComponent(h.hid)}`}
                   className={styles.listItem}
                 >
                   <div className={styles.listLeft}>
