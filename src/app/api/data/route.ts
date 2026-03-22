@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server'
+import Papa from 'papaparse'
 
+// ── Calendar-year quarters ─────────────────────────────────────────────────
 const MONTH_MAP: Record<string, number> = {
   Jan:1, Feb:2, Mar:3, Apr:4, May:5, Jun:6,
   Jul:7, Aug:8, Sept:9, Sep:9, Oct:10, Nov:11, Dec:12
@@ -27,36 +29,14 @@ function quarterToNum(year: number, q: string): number {
   return year * 4 + parseInt(q[1])
 }
 
-function splitCSVLine(line: string): string[] {
-  const cols: string[] = []
-  let cur = '', inQ = false
-  for (const ch of line) {
-    if (ch === '"') { inQ = !inQ }
-    else if (ch === ',' && !inQ) { cols.push(cur); cur = '' }
-    else cur += ch
-  }
-  cols.push(cur)
-  return cols
-}
-
-function parseCSV(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter(l => l.trim())
-  const headers = splitCSVLine(lines[0])
-  return lines.slice(1).map(line => {
-    const cols = splitCSVLine(line)
-    const row: Record<string, string> = {}
-    headers.forEach((h, i) => { row[h.trim()] = (cols[i] ?? '').trim() })
-    return row
-  })
-}
-
-// 5-minute server cache
+// ── Server-side cache (5 minutes) ──────────────────────────────────────────
 let cache: unknown = null
 let cacheTime = 0
 const CACHE_MS = 5 * 60 * 1000
 
 export async function GET() {
   try {
+    // Return cached data if fresh
     if (cache && Date.now() - cacheTime < CACHE_MS) {
       return NextResponse.json(cache)
     }
@@ -70,6 +50,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Server configuration missing' }, { status: 500 })
     }
 
+    // Fetch raw CSV from GitHub
     const url = `https://api.github.com/repos/${username}/${repo}/contents/${filePath}`
     const ghRes = await fetch(url, {
       headers: {
@@ -85,7 +66,13 @@ export async function GET() {
     }
 
     const csvText = await ghRes.text()
-    const rows = parseCSV(csvText)
+
+    // Use papaparse — handles multiline quoted fields correctly
+    const parsed = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h: string) => h.trim(),
+    })
 
     type HouseData = {
       id: string; sector: string; street: string; house: string
@@ -97,7 +84,7 @@ export async function GET() {
     const housesMap: Record<string, HouseData> = {}
     const rawPayments: Record<string, { yr: number; q: string; amount: number }[]> = {}
 
-    for (const row of rows) {
+    for (const row of parsed.data as Record<string, string>[]) {
       const sector = row['Sector']?.trim()
       const street = row['Street #']?.trim()
       const house  = row['House #']?.trim()
@@ -109,9 +96,9 @@ export async function GET() {
       const name   = row['Name']?.trim() ?? ''
 
       if (!sector || !street || !house || !rid || !date) continue
-      const parsed = parseDate(date)
-      if (!parsed) continue
-      const { year, month } = parsed
+      const parsed2 = parseDate(date)
+      if (!parsed2) continue
+      const { year, month } = parsed2
       const quarter = getCalendarQuarter(month)
       if (!quarter) continue
 
@@ -134,7 +121,7 @@ export async function GET() {
       rawPayments[rid].push({ yr: year, q: quarter, amount: amt })
     }
 
-    // Find first non-zero payment
+    // Find first non-zero payment per house
     for (const [rid, pmts] of Object.entries(rawPayments)) {
       const nonZero = pmts
         .filter(p => p.amount > 0)
