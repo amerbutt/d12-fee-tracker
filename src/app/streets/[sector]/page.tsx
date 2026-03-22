@@ -60,8 +60,8 @@ function StreetsScreen({ sector }: { sector: string }) {
   )
 }
 
-export default function StreetsPage({ params }: { params: Promise<{ sector: string }> }) {
-  const { sector } = use(params)
+export default function StreetsPage({ params }: { params: { sector: string } }) {
+  const sector = params.sector
   const decoded = decodeURIComponent(sector)
 
   return (
