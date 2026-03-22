@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { DataProvider, useData } from '../../../context'
-import type { HouseData } from '../../../context'
 import { NavHeader, SearchBar, EmptyState } from '../../../components'
 import styles from './page.module.css'
 
@@ -29,9 +28,7 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
     })
 
   const filtered = houses.filter(h =>
-    !search ||
-    h.house.toLowerCase().includes(search.toLowerCase()) ||
-    h.name.toLowerCase().includes(search.toLowerCase())
+    !search || h.house.toLowerCase().includes(search.toLowerCase())
   )
 
   return (
@@ -45,14 +42,13 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
           { label: `Street ${street}` }
         ]}
       />
-      <SearchBar placeholder="Search house or name..." value={search} onChange={setSearch} />
+      <SearchBar placeholder="Search house number..." value={search} onChange={setSearch} />
       <div className={styles.content}>
         <p className={styles.sectionLabel}>{filtered.length} Houses on Street {street}</p>
         {filtered.length === 0
           ? <EmptyState message="No houses match your search" />
           : filtered.map(h => {
               const badge = statusBadge(h.status)
-              const nameDisplay = h.name && h.name !== 'nan' ? h.name : '—'
               return (
                 <Link
                   key={h.hid}
@@ -66,7 +62,7 @@ function HousesScreen({ sector, street }: { sector: string; street: string }) {
                         House {h.house}
                         <span className={`${styles.badge} ${badge.cls}`}>{badge.label}</span>
                       </div>
-                      <div className={styles.listSub}>{nameDisplay} · Cat {h.cat}</div>
+                      <div className={styles.listSub}>Category {h.cat}</div>
                     </div>
                   </div>
                   <span className={styles.arrow}>›</span>

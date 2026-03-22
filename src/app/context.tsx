@@ -4,7 +4,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 
 export type QuarterData = {
   total: number
-  months: number[]
+  monthCount: number
+  hasZero: boolean
 }
 
 export type HouseData = {
@@ -12,7 +13,6 @@ export type HouseData = {
   sector: string
   street: string
   house: string
-  name: string
   cat: number
   status: string
   firstPaymentYear: number | null
@@ -24,6 +24,7 @@ export type AppData = {
   sectors: Record<string, Record<string, string[]>>
   houses: Record<string, HouseData>
   lastUpdated: number
+  currentQuarterNum: number
 }
 
 type DataContextType = {

@@ -9,13 +9,37 @@ const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
 const Q_LABELS: Record<string, string> = {
   Q1: 'Jan–Mar', Q2: 'Apr–Jun', Q3: 'Jul–Sep', Q4: 'Oct–Dec'
 }
-const EXPECTED: Record<number, number> = { 0: 1000, 1: 1000, 2: 500 }
+
+// Fee rates per month by category
+// Old rates (before Q3 2025): Cat-1=1000, Cat-2=500
+// New rates (from Q3 2025): Cat-0=1500, Cat-1=1300, Cat-2=700
+const RATE_CHANGE_QNUM = 2025 * 4 + 3 // Q3 2025
+
+const OLD_MONTHLY: Record<number, number> = { 0: 1000, 1: 1000, 2: 500 }
+const NEW_MONTHLY: Record<number, number> = { 0: 1500, 1: 1300, 2: 700 }
+
+function getMonthlyRate(cat: number, year: number, quarter: string): number {
+  const qnum = year * 4 + parseInt(quarter[1])
+  return qnum >= RATE_CHANGE_QNUM
+    ? (NEW_MONTHLY[cat] ?? 1300)
+    : (OLD_MONTHLY[cat] ?? 1000)
+}
+
+function getCurrentRates(cat: number) {
+  const monthly   = NEW_MONTHLY[cat] ?? 1300
+  return {
+    monthly,
+    quarterly:  monthly * 3,
+    biannual:   monthly * 6,
+    yearly:     monthly * 12,
+  }
+}
 
 function quarterToNum(year: number, q: string): number {
   return year * 4 + parseInt(q[1])
 }
 
-type CellStatus = 'paid' | 'partial' | 'missed' | 'na' | 'before'
+type CellStatus = 'paid' | 'partial' | 'missed' | 'future' | 'na' | 'before'
 
 function getCellStatus(
   qData: QuarterData | undefined,
@@ -23,26 +47,29 @@ function getCellStatus(
   year: number,
   quarter: string,
   firstYear: number | null,
-  firstQuarter: string | null
+  firstQuarter: string | null,
+  currentQNum: number
 ): CellStatus {
   if (!isConstructed) return 'na'
 
-  // Before first payment period
-  if (firstYear !== null && firstQuarter !== null) {
-    if (quarterToNum(year, quarter) < quarterToNum(firstYear, firstQuarter)) {
-      return 'before'
-    }
-  } else {
-    return 'na' // No payments ever
+  const qNum = quarterToNum(year, quarter)
+
+  // Future quarter — not due yet, but show if paid in advance
+  if (qNum > currentQNum) {
+    if (qData && qData.total > 0) return 'paid' // advance payment
+    return 'future'
   }
 
-  if (!qData || qData.months.length === 0) return 'missed'
+  // Before first payment period
+  if (firstYear !== null && firstQuarter !== null) {
+    if (qNum < quarterToNum(firstYear, firstQuarter)) return 'before'
+  } else {
+    return 'na'
+  }
 
-  const hasZeroMonth = qData.months.some(m => m === 0)
-  const allZero = qData.months.every(m => m === 0)
-
-  if (allZero) return 'missed'
-  if (hasZeroMonth) return 'partial'  // Some months paid, some missed → ORANGE
+  if (!qData || qData.monthCount === 0) return 'missed'
+  if (qData.total === 0) return 'missed'
+  if (qData.monthCount < 3 || qData.hasZero) return 'partial'
   return 'paid'
 }
 
@@ -56,28 +83,33 @@ function DetailScreen({ hid }: { hid: string }) {
   if (!h) return <div className={styles.loading}><p style={{ color: 'var(--red)' }}>House not found.</p></div>
 
   const isConstructed = h.status === 'Constructed'
-  const expectedFee   = EXPECTED[h.cat] ?? 1000
+  const currentQNum   = data!.currentQuarterNum
   const payments      = h.payments ?? {}
-  const years         = Object.keys(payments).map(Number).sort()
+  const rates         = getCurrentRates(h.cat)
 
-  const minYear = h.firstPaymentYear ?? (years.length ? Math.min(...years) : new Date().getFullYear())
-  const maxYear = Math.max(...years, new Date().getFullYear())
+  // Build year range — from first payment to end of current year
+  const years         = Object.keys(payments).map(Number).sort()
+  const currentYear   = Math.floor(currentQNum / 4)
+  const minYear       = h.firstPaymentYear ?? (years.length ? Math.min(...years) : currentYear)
+  // Show up to current year + 1 if advance payments exist beyond current year
+  const maxPayYear    = years.length ? Math.max(...years) : currentYear
+  const maxYear       = Math.max(maxPayYear, currentYear)
+
   const allYears: number[] = []
   for (let y = minYear; y <= maxYear; y++) allYears.push(y)
 
-  // Summary counts
+  // Summary — only count up to current quarter
   let paid = 0, partial = 0, missed = 0, totalPaid = 0
   allYears.forEach(y => {
     QUARTERS.forEach(q => {
-      const qData = payments[String(y)]?.[q]
-      const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter)
-      if (status === 'paid')    { paid++;    totalPaid += qData!.total }
-      if (status === 'partial') { partial++; totalPaid += qData!.total }
+      const qData  = payments[String(y)]?.[q]
+      const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter, currentQNum)
+      if (status === 'paid')    { paid++;    totalPaid += qData?.total ?? 0 }
+      if (status === 'partial') { partial++; totalPaid += qData?.total ?? 0 }
       if (status === 'missed')  { missed++ }
     })
   })
 
-  const nameDisplay = h.name && h.name !== 'nan' ? h.name : '—'
   const statusCls = h.status === 'Plot' ? styles.badgePlot
                   : h.status === 'Constructed' ? styles.badgeBuilt
                   : styles.badgeUnder
@@ -96,7 +128,7 @@ function DetailScreen({ hid }: { hid: string }) {
       />
 
       <div className={styles.content}>
-        {/* House Info Card */}
+        {/* House Info Card — NO resident name for privacy */}
         <div className={styles.infoCard}>
           <div className={styles.infoTop}>
             <div>
@@ -106,15 +138,37 @@ function DetailScreen({ hid }: { hid: string }) {
             <span className={`${styles.badge} ${statusCls}`}>{h.status}</span>
           </div>
           <div className={styles.metaRow}>
-            <div className={styles.metaItem}>👤 {nameDisplay}</div>
-            <span className={styles.catTag}>Cat {h.cat}</span>
+            <span className={styles.catTag}>Category {h.cat}</span>
           </div>
-          {isConstructed && (
-            <div className={styles.expectedFee}>
-              Expected: <strong>Rs. {expectedFee.toLocaleString()} / quarter</strong>
-            </div>
-          )}
         </div>
+
+        {/* Fee Rate Panel — Monthly / Quarterly / 6-Monthly / Yearly */}
+        {isConstructed && (
+          <div className={styles.rateCard}>
+            <div className={styles.rateTitle}>Current Fee Rates (Cat {h.cat})</div>
+            <div className={styles.rateGrid}>
+              <div className={styles.rateItem}>
+                <div className={styles.rateVal}>Rs. {rates.monthly.toLocaleString()}</div>
+                <div className={styles.rateLbl}>Monthly</div>
+              </div>
+              <div className={styles.rateDivider} />
+              <div className={styles.rateItem}>
+                <div className={styles.rateVal}>Rs. {rates.quarterly.toLocaleString()}</div>
+                <div className={styles.rateLbl}>Quarterly</div>
+              </div>
+              <div className={styles.rateDivider} />
+              <div className={styles.rateItem}>
+                <div className={styles.rateVal}>Rs. {rates.biannual.toLocaleString()}</div>
+                <div className={styles.rateLbl}>6-Monthly</div>
+              </div>
+              <div className={styles.rateDivider} />
+              <div className={styles.rateItem}>
+                <div className={styles.rateVal}>Rs. {rates.yearly.toLocaleString()}</div>
+                <div className={styles.rateLbl}>Yearly</div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Summary */}
         {isConstructed && h.firstPaymentYear && (
@@ -149,6 +203,7 @@ function DetailScreen({ hid }: { hid: string }) {
             <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--green)'}}/>Paid</div>
             <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--yellow)'}}/>Partial</div>
             <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--red)'}}/>Missed</div>
+            <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--accent)', opacity:0.4}}/>Advance</div>
             <div className={styles.legendItem}><span className={styles.dot} style={{background:'var(--border)'}}/>N/A</div>
           </div>
         )}
@@ -167,25 +222,39 @@ function DetailScreen({ hid }: { hid: string }) {
               </tr>
             </thead>
             <tbody>
-              {allYears.map(y => (
-                <tr key={y}>
-                  <td className={styles.tdYear}>{y}</td>
-                  {QUARTERS.map(q => {
-                    const qData  = payments[String(y)]?.[q]
-                    const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter)
-                    const display = qData?.total ?? 0
-                    return (
-                      <td key={q} className={`${styles.td} ${styles[status]}`}>
-                        {status === 'paid'    && display.toLocaleString()}
-                        {status === 'partial' && display.toLocaleString()}
-                        {status === 'missed'  && '✗'}
-                        {status === 'na'      && '—'}
-                        {status === 'before'  && '·'}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
+              {allYears.map(y => {
+                // Skip rows that are entirely future with no payments
+                const hasAnyData = QUARTERS.some(q => {
+                  const qData = payments[String(y)]?.[q]
+                  const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter, currentQNum)
+                  return status !== 'future' && status !== 'before'
+                })
+                const isFutureYear = quarterToNum(y, 'Q1') > currentQNum
+                if (isFutureYear && !hasAnyData) return null
+
+                return (
+                  <tr key={y}>
+                    <td className={styles.tdYear}>{y}</td>
+                    {QUARTERS.map(q => {
+                      const qData  = payments[String(y)]?.[q]
+                      const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter, currentQNum)
+                      const display = qData?.total ?? 0
+                      const monthlyRate = getMonthlyRate(h.cat, y, q)
+
+                      return (
+                        <td key={q} className={`${styles.td} ${styles[status]}`}>
+                          {status === 'paid'    && display.toLocaleString()}
+                          {status === 'partial' && display.toLocaleString()}
+                          {status === 'missed'  && <span title={`Due: Rs.${(monthlyRate*3).toLocaleString()}`}>✗</span>}
+                          {status === 'future'  && <span className={styles.futureCell}>—</span>}
+                          {status === 'na'      && '—'}
+                          {status === 'before'  && '·'}
+                        </td>
+                      )
+                    })}
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

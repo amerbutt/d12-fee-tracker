@@ -1,5 +1,6 @@
 .content { padding: 14px 16px 80px; }
 
+/* House Info Card */
 .infoCard {
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
@@ -7,44 +8,53 @@
 .infoTop { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
 .houseNo { font-family: var(--mono); font-size: 24px; font-weight: 700; color: var(--accent); }
 .houseAddr { font-size: 12px; color: var(--text2); margin-top: 3px; }
+.metaRow { display: flex; align-items: center; gap: 10px; }
+.catTag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: rgba(59,130,246,0.15); color: var(--accent); font-family: var(--mono); }
 
 .badge { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
 .badgePlot  { background: rgba(245,158,11,0.15); color: var(--yellow); }
 .badgeBuilt { background: rgba(34,197,94,0.12);  color: var(--green); }
 .badgeUnder { background: rgba(239,68,68,0.12);  color: var(--red); }
 
-.metaRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.metaItem { font-size: 12px; color: var(--text2); }
-.catTag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; background: rgba(59,130,246,0.15); color: var(--accent); font-family: var(--mono); }
-.expectedFee { font-size: 12px; color: var(--text2); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
-.expectedFee strong { color: var(--accent); }
+/* Fee Rate Panel */
+.rateCard {
+  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
+  border: 1.5px solid rgba(59,130,246,0.25);
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px;
+}
+.rateTitle { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 12px; }
+.rateGrid { display: flex; align-items: center; }
+.rateItem { flex: 1; text-align: center; }
+.rateVal { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); }
+.rateLbl { font-size: 10px; color: var(--text2); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+.rateDivider { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
 
+/* Summary strip */
 .summaryStrip {
   display: flex; align-items: center;
-  background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
-  border: 1px solid rgba(59,130,246,0.2); border-radius: 12px;
-  padding: 14px 8px; margin-bottom: 12px;
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 14px 8px; margin-bottom: 12px;
 }
 .summaryItem { flex: 1; text-align: center; }
 .summaryVal { font-size: 22px; font-weight: 700; font-family: var(--mono); line-height: 1; }
 .summaryLbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 4px; }
 .summaryDivider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
 
-.legend { display: flex; gap: 14px; flex-wrap: wrap; padding: 0 2px; margin-bottom: 12px; }
+/* Legend */
+.legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 2px; margin-bottom: 12px; }
 .legendItem { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
 .dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; display: inline-block; }
 
+/* Table */
 .tableWrap { border-radius: var(--radius); overflow: hidden; border: 1.5px solid var(--border); margin-bottom: 14px; }
 .table { width: 100%; border-collapse: collapse; }
-
 .th, .thYear {
-  padding: 9px 4px; font-size: 10px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: 0.07em; color: var(--text2);
-  text-align: center; background: var(--surface2); border-bottom: 1px solid var(--border);
+  padding: 9px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.07em; color: var(--text2); text-align: center;
+  background: var(--surface2); border-bottom: 1px solid var(--border);
 }
 .thYear { text-align: left; padding-left: 12px; width: 52px; }
 .thSub { font-weight: 400; font-size: 8px; text-transform: none; letter-spacing: 0; display: block; margin-top: 1px; }
-
 .td, .tdYear {
   padding: 9px 4px; text-align: center; font-size: 12px;
   background: var(--surface); color: var(--text);
@@ -57,13 +67,15 @@ tbody tr:hover .td, tbody tr:hover .tdYear { background: var(--surface2); }
 .paid    { color: var(--green);  font-weight: 600; font-size: 11px; }
 .partial { color: var(--yellow); font-weight: 700; font-size: 11px; }
 .missed  { color: var(--red);    font-weight: 700; font-size: 14px; }
+.future  { color: var(--border); }
 .na      { color: var(--border); }
 .before  { color: var(--border); font-size: 10px; }
+.futureCell { font-size: 11px; color: var(--border); }
 
 .plotNote {
   font-size: 12px; color: var(--yellow);
   background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
-  border-radius: 10px; padding: 10px 14px; margin-top: 4px;
+  border-radius: 10px; padding: 10px 14px;
 }
 
 .loading {

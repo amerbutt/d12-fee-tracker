@@ -28,7 +28,12 @@ function quarterToNum(year: number, q: string): number {
   return year * 4 + parseInt(q[1])
 }
 
-// Cache 5 minutes
+// Current quarter (March 2026 = Q1 2026)
+const NOW_MONTH = 3
+const NOW_YEAR  = 2026
+const NOW_Q     = getCalendarQuarter(NOW_MONTH)!
+const NOW_QNUM  = quarterToNum(NOW_YEAR, NOW_Q)
+
 let cache: unknown = null
 let cacheTime = 0
 const CACHE_MS = 5 * 60 * 1000
@@ -64,7 +69,6 @@ export async function GET() {
 
     const csvText = await ghRes.text()
 
-    // papaparse handles multiline quoted fields correctly
     const parsed = Papa.parse(csvText, {
       header: true,
       skipEmptyLines: true,
@@ -72,13 +76,14 @@ export async function GET() {
     })
 
     type QuarterData = {
-      total: number        // sum of all months in quarter
-      months: number[]     // individual monthly amounts
+      total: number
+      monthCount: number
+      hasZero: boolean
     }
 
     type HouseData = {
       id: string; sector: string; street: string; house: string
-      name: string; cat: number; status: string
+      cat: number; status: string
       firstPaymentYear: number | null; firstPaymentQuarter: string | null
       payments: Record<string, Record<string, QuarterData>>
     }
@@ -95,7 +100,6 @@ export async function GET() {
       const amt    = parseInt(row['Amount']?.trim() ?? '0') || 0
       const cat    = parseInt(row['Cat.']?.trim() ?? '0') || 0
       const status = row['Status']?.trim() ?? ''
-      const name   = row['Name']?.trim() ?? ''
 
       if (!sector || !street || !house || !rid || !date) continue
       const parsedDate = parseDate(date)
@@ -107,7 +111,6 @@ export async function GET() {
       if (!housesMap[rid]) {
         housesMap[rid] = {
           id: rid, sector, street, house,
-          name: (name && name !== 'nan') ? name : '',
           cat, status,
           firstPaymentYear: null, firstPaymentQuarter: null,
           payments: {}
@@ -118,15 +121,16 @@ export async function GET() {
       const yr = String(year)
       if (!housesMap[rid].payments[yr]) housesMap[rid].payments[yr] = {}
       if (!housesMap[rid].payments[yr][quarter]) {
-        housesMap[rid].payments[yr][quarter] = { total: 0, months: [] }
+        housesMap[rid].payments[yr][quarter] = { total: 0, monthCount: 0, hasZero: false }
       }
       housesMap[rid].payments[yr][quarter].total += amt
-      housesMap[rid].payments[yr][quarter].months.push(amt)
+      housesMap[rid].payments[yr][quarter].monthCount += 1
+      if (amt === 0) housesMap[rid].payments[yr][quarter].hasZero = true
 
       rawPayments[rid].push({ yr: year, q: quarter, amount: amt })
     }
 
-    // Find first non-zero payment per house
+    // Find first non-zero payment
     for (const [rid, pmts] of Object.entries(rawPayments)) {
       const nonZero = pmts
         .filter(p => p.amount > 0)
@@ -156,7 +160,12 @@ export async function GET() {
       }
     }
 
-    const result = { sectors, houses: housesMap, lastUpdated: Date.now() }
+    const result = {
+      sectors,
+      houses: housesMap,
+      lastUpdated: Date.now(),
+      currentQuarterNum: NOW_QNUM
+    }
     cache = result
     cacheTime = Date.now()
 
