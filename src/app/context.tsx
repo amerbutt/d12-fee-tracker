@@ -6,6 +6,7 @@ export type QuarterData = {
   total: number
   monthCount: number
   hasZero: boolean
+  hasBelowRate: boolean
 }
 
 export type HouseData = {

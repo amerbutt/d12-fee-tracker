@@ -28,9 +28,23 @@ function quarterToNum(year: number, q: string): number {
   return year * 4 + parseInt(q[1])
 }
 
+// Rate change: Q3 2025
+const RATE_CHANGE_QNUM = 2025 * 4 + 3
+
+// Monthly rates by category
+const OLD_MONTHLY: Record<number, number> = { 0: 1000, 1: 1000, 2: 500 }
+const NEW_MONTHLY: Record<number, number> = { 0: 1500, 1: 1300, 2: 700 }
+
+function getMonthlyRate(cat: number, year: number, quarter: string): number {
+  const qnum = quarterToNum(year, quarter)
+  return qnum >= RATE_CHANGE_QNUM
+    ? (NEW_MONTHLY[cat] ?? 1300)
+    : (OLD_MONTHLY[cat] ?? 1000)
+}
+
 // Current quarter (March 2026 = Q1 2026)
-const NOW_MONTH = 3
 const NOW_YEAR  = 2026
+const NOW_MONTH = 3
 const NOW_Q     = getCalendarQuarter(NOW_MONTH)!
 const NOW_QNUM  = quarterToNum(NOW_YEAR, NOW_Q)
 
@@ -79,6 +93,7 @@ export async function GET() {
       total: number
       monthCount: number
       hasZero: boolean
+      hasBelowRate: boolean  // any month paid below prescribed rate (from Q3 2025)
     }
 
     type HouseData = {
@@ -110,8 +125,7 @@ export async function GET() {
 
       if (!housesMap[rid]) {
         housesMap[rid] = {
-          id: rid, sector, street, house,
-          cat, status,
+          id: rid, sector, street, house, cat, status,
           firstPaymentYear: null, firstPaymentQuarter: null,
           payments: {}
         }
@@ -121,11 +135,22 @@ export async function GET() {
       const yr = String(year)
       if (!housesMap[rid].payments[yr]) housesMap[rid].payments[yr] = {}
       if (!housesMap[rid].payments[yr][quarter]) {
-        housesMap[rid].payments[yr][quarter] = { total: 0, monthCount: 0, hasZero: false }
+        housesMap[rid].payments[yr][quarter] = {
+          total: 0, monthCount: 0, hasZero: false, hasBelowRate: false
+        }
       }
-      housesMap[rid].payments[yr][quarter].total += amt
-      housesMap[rid].payments[yr][quarter].monthCount += 1
-      if (amt === 0) housesMap[rid].payments[yr][quarter].hasZero = true
+
+      const qData = housesMap[rid].payments[yr][quarter]
+      qData.total      += amt
+      qData.monthCount += 1
+      if (amt === 0) qData.hasZero = true
+
+      // Check below-rate: only from Q3 2025 onwards
+      const qNum = quarterToNum(year, quarter)
+      if (qNum >= RATE_CHANGE_QNUM) {
+        const prescribed = getMonthlyRate(cat, year, quarter)
+        if (amt > 0 && amt < prescribed) qData.hasBelowRate = true
+      }
 
       rawPayments[rid].push({ yr: year, q: quarter, amount: amt })
     }
@@ -161,8 +186,7 @@ export async function GET() {
     }
 
     const result = {
-      sectors,
-      houses: housesMap,
+      sectors, houses: housesMap,
       lastUpdated: Date.now(),
       currentQuarterNum: NOW_QNUM
     }
