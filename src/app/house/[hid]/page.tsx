@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect, useRef } from 'react'
 import { DataProvider, useData } from '../../context'
 import type { HouseData, QuarterData } from '../../context'
 import { NavHeader } from '../../components'
@@ -14,12 +15,7 @@ const NEW_MONTHLY: Record<number, number> = { 0: 1500, 1: 1300, 2: 700 }
 
 function getCurrentRates(cat: number) {
   const monthly = NEW_MONTHLY[cat] ?? 1300
-  return {
-    monthly,
-    quarterly: monthly * 3,
-    biannual:  monthly * 6,
-    yearly:    monthly * 12,
-  }
+  return { monthly, quarterly: monthly * 3, biannual: monthly * 6, yearly: monthly * 12 }
 }
 
 function quarterToNum(year: number, q: string): number {
@@ -38,32 +34,103 @@ function getCellStatus(
   currentQNum: number
 ): CellStatus {
   if (!isConstructed) return 'na'
-
   const qNum = quarterToNum(year, quarter)
-
-  // Future quarter — not due yet
   if (qNum > currentQNum) {
-    if (qData && qData.total > 0) return 'paid' // advance payment
+    if (qData && qData.total > 0) return 'paid'
     return 'future'
   }
-
-  // Before first payment period
   if (firstYear !== null && firstQuarter !== null) {
     if (qNum < quarterToNum(firstYear, firstQuarter)) return 'before'
-  } else {
-    return 'na'
-  }
-
+  } else return 'na'
   if (!qData || qData.monthCount === 0) return 'missed'
   if (qData.total === 0) return 'missed'
-
-  // PARTIAL if:
-  // 1. Any month is missing (< 3 months recorded)
-  // 2. Any month has zero amount
-  // 3. From Q3 2025 onwards: any month paid below prescribed rate
   if (qData.monthCount < 3 || qData.hasZero || qData.hasBelowRate) return 'partial'
-
   return 'paid'
+}
+
+// Tooltip — smart positioning: shows below for first 2 years, above for rest
+function ReceiptTooltip({ receipts, amount, onClose, position }: {
+  receipts: string[]
+  amount: number
+  onClose: () => void
+  position: 'above' | 'below'
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose()
+    }
+    // Small delay to prevent immediate close
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClick)
+    }, 100)
+    return () => {
+      clearTimeout(timer)
+      document.removeEventListener('mousedown', handleClick)
+    }
+  }, [onClose])
+
+  return (
+    <div ref={ref} className={`${styles.tooltip} ${position === 'below' ? styles.tooltipBelow : styles.tooltipAbove}`}>
+      {/* Arrow */}
+      <div className={position === 'below' ? styles.arrowUp : styles.arrowDown} />
+
+      <div className={styles.tooltipHeader}>
+        <span className={styles.tooltipAmount}>Rs. {amount.toLocaleString()}</span>
+        <button className={styles.tooltipClose} onClick={e => { e.stopPropagation(); onClose() }}>✕</button>
+      </div>
+      {receipts.length > 0 ? (
+        <>
+          <div className={styles.tooltipLabel}>Receipt{receipts.length > 1 ? 's' : ''}</div>
+          <div className={styles.tooltipReceipts}>
+            {receipts.map((r, i) => (
+              <span key={i} className={styles.receiptBadge}>#{r}</span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className={styles.tooltipNoReceipt}>No receipt recorded</div>
+      )}
+    </div>
+  )
+}
+
+// Payment cell — no icon, full cell is tappable
+function PaymentCell({ status, qData, rowIndex, totalRows }: {
+  status: CellStatus
+  qData: QuarterData | undefined
+  rowIndex: number
+  totalRows: number
+}) {
+  const [open, setOpen] = useState(false)
+  const canTap = (status === 'paid' || status === 'partial') && qData
+
+  // Show below for first 3 rows, above for the rest
+  const position: 'above' | 'below' = rowIndex < 3 ? 'below' : 'above'
+
+  return (
+    <td
+      className={`${styles.td} ${styles[status]} ${canTap ? styles.tappable : ''}`}
+      onClick={() => canTap && setOpen(o => !o)}
+    >
+      {status === 'paid'    && (qData?.total ?? 0).toLocaleString()}
+      {status === 'partial' && (qData?.total ?? 0).toLocaleString()}
+      {status === 'missed'  && '✗'}
+      {status === 'future'  && <span className={styles.futureCell}>—</span>}
+      {status === 'na'      && '—'}
+      {status === 'before'  && '·'}
+
+      {open && canTap && (
+        <ReceiptTooltip
+          receipts={qData!.receipts}
+          amount={qData!.total}
+          onClose={() => setOpen(false)}
+          position={position}
+        />
+      )}
+    </td>
+  )
 }
 
 function DetailScreen({ hid }: { hid: string }) {
@@ -80,18 +147,24 @@ function DetailScreen({ hid }: { hid: string }) {
   const payments      = h.payments ?? {}
   const rates         = getCurrentRates(h.cat)
 
-  const years      = Object.keys(payments).map(Number).sort()
+  const years       = Object.keys(payments).map(Number).sort()
   const currentYear = Math.floor(currentQNum / 4)
-  const minYear    = h.firstPaymentYear ?? (years.length ? Math.min(...years) : currentYear)
-  const maxPayYear = years.length ? Math.max(...years) : currentYear
-  const maxYear    = Math.max(maxPayYear, currentYear)
+  const minYear     = h.firstPaymentYear ?? (years.length ? Math.min(...years) : currentYear)
+  const maxPayYear  = years.length ? Math.max(...years) : currentYear
+  const maxYear     = Math.max(maxPayYear, currentYear)
 
   const allYears: number[] = []
   for (let y = minYear; y <= maxYear; y++) allYears.push(y)
 
-  // Summary counts
+  // Filter out future years with no data
+  const visibleYears = allYears.filter(y => {
+    const isFutureYear = quarterToNum(y, 'Q1') > currentQNum
+    const hasData = QUARTERS.some(q => payments[String(y)]?.[q]?.total ?? 0 > 0)
+    return !isFutureYear || hasData
+  })
+
   let paid = 0, partial = 0, missed = 0, totalPaid = 0
-  allYears.forEach(y => {
+  visibleYears.forEach(y => {
     QUARTERS.forEach(q => {
       const qData  = payments[String(y)]?.[q]
       const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter, currentQNum)
@@ -119,7 +192,7 @@ function DetailScreen({ hid }: { hid: string }) {
       />
 
       <div className={styles.content}>
-        {/* House Info Card */}
+        {/* House Info */}
         <div className={styles.infoCard}>
           <div className={styles.infoTop}>
             <div>
@@ -130,6 +203,9 @@ function DetailScreen({ hid }: { hid: string }) {
           </div>
           <div className={styles.metaRow}>
             <span className={styles.catTag}>Category {h.cat}</span>
+            {isConstructed && (
+              <span className={styles.tapHint}>Tap any amount to see receipt</span>
+            )}
           </div>
         </div>
 
@@ -213,35 +289,24 @@ function DetailScreen({ hid }: { hid: string }) {
               </tr>
             </thead>
             <tbody>
-              {allYears.map(y => {
-                const isFutureYear = quarterToNum(y, 'Q1') > currentQNum
-                const hasAdvance   = QUARTERS.some(q => {
-                  const qd = payments[String(y)]?.[q]
-                  return qd && qd.total > 0
-                })
-                if (isFutureYear && !hasAdvance) return null
-
-                return (
-                  <tr key={y}>
-                    <td className={styles.tdYear}>{y}</td>
-                    {QUARTERS.map(q => {
-                      const qData  = payments[String(y)]?.[q]
-                      const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter, currentQNum)
-                      const display = qData?.total ?? 0
-                      return (
-                        <td key={q} className={`${styles.td} ${styles[status]}`}>
-                          {status === 'paid'    && display.toLocaleString()}
-                          {status === 'partial' && display.toLocaleString()}
-                          {status === 'missed'  && '✗'}
-                          {status === 'future'  && <span className={styles.futureCell}>—</span>}
-                          {status === 'na'      && '—'}
-                          {status === 'before'  && '·'}
-                        </td>
-                      )
-                    })}
-                  </tr>
-                )
-              })}
+              {visibleYears.map((y, rowIndex) => (
+                <tr key={y}>
+                  <td className={styles.tdYear}>{y}</td>
+                  {QUARTERS.map(q => {
+                    const qData  = payments[String(y)]?.[q]
+                    const status = getCellStatus(qData, isConstructed, y, q, h.firstPaymentYear, h.firstPaymentQuarter, currentQNum)
+                    return (
+                      <PaymentCell
+                        key={q}
+                        status={status}
+                        qData={qData}
+                        rowIndex={rowIndex}
+                        totalRows={visibleYears.length}
+                      />
+                    )
+                  })}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
