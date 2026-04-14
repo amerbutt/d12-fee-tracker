@@ -154,7 +154,7 @@ function DetailScreen({ hid }: { hid: string }) {
   const maxYear     = Math.max(maxPayYear, currentYear)
 
   const allYears: number[] = []
-  for (let y = minYear; y <= maxYear; y++) allYears.push(y)
+  for (let y = maxYear; y >= minYear; y--) allYears.push(y)
 
   // Filter out future years with no data
   const visibleYears = allYears.filter(y => {
