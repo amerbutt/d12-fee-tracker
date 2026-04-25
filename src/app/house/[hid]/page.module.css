@@ -1,6 +1,5 @@
 .content { padding: 14px 16px 80px; }
 
-/* House Info Card */
 .infoCard {
   background: var(--surface); border: 1.5px solid var(--border);
   border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
@@ -11,13 +10,11 @@
 .metaRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .catTag { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; background: rgba(59,130,246,0.15); color: var(--accent); font-family: var(--mono); }
 .tapHint { font-size: 10px; color: var(--text2); font-style: italic; }
-
 .badge { font-size: 10px; font-weight: 700; padding: 4px 10px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
 .badgePlot  { background: rgba(245,158,11,0.15); color: var(--yellow); }
 .badgeBuilt { background: rgba(34,197,94,0.12);  color: var(--green); }
 .badgeUnder { background: rgba(239,68,68,0.12);  color: var(--red); }
 
-/* Fee Rate Panel */
 .rateCard {
   background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(139,92,246,0.08));
   border: 1.5px solid rgba(59,130,246,0.25);
@@ -28,32 +25,23 @@
 .rateItem { flex: 1; text-align: center; }
 .rateVal { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--accent); }
 .rateLbl { font-size: 10px; color: var(--text2); margin-top: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
-.rateDivider { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
+.rateDivider { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; margin: 0 2px; }
 
-/* Summary strip */
 .summaryStrip {
   display: flex; align-items: center;
   background: var(--surface); border: 1.5px solid var(--border);
-  border-radius: 12px; padding: 14px 8px; margin-bottom: 12px;
+  border-radius: 12px; padding: 12px 4px; margin-bottom: 12px;
 }
 .summaryItem { flex: 1; text-align: center; }
-.summaryVal { font-size: 22px; font-weight: 700; font-family: var(--mono); line-height: 1; }
-.summaryLbl { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 4px; }
-.summaryDivider { width: 1px; height: 36px; background: var(--border); flex-shrink: 0; }
+.summaryVal { font-size: 20px; font-weight: 700; font-family: var(--mono); line-height: 1; }
+.summaryLbl { font-size: 9px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 4px; }
+.summaryDivider { width: 1px; height: 32px; background: var(--border); flex-shrink: 0; }
 
-/* Legend */
 .legend { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 2px; margin-bottom: 12px; }
 .legendItem { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text2); }
 .dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; display: inline-block; }
 
-/* Table */
-.tableWrap {
-  border-radius: var(--radius); overflow: visible;
-  border: 1.5px solid var(--border); margin-bottom: 14px;
-  border-radius: var(--radius);
-  /* Allow overflow so tooltip is not clipped */
-  position: relative;
-}
+.tableWrap { border-radius: var(--radius); overflow: visible; border: 1.5px solid var(--border); margin-bottom: 14px; position: relative; }
 .table { width: 100%; border-collapse: collapse; }
 .th, .thYear {
   padding: 9px 4px; font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -64,127 +52,70 @@
 .thSub { font-weight: 400; font-size: 8px; text-transform: none; letter-spacing: 0; display: block; margin-top: 1px; }
 
 .td, .tdYear {
-  padding: 10px 4px; text-align: center; font-size: 13px;
+  padding: 10px 4px; text-align: center; font-size: 12px; font-weight: 600;
   background: var(--surface); color: var(--text);
   border-top: 1px solid var(--border); vertical-align: middle;
   position: relative;
-  font-weight: 600;
 }
-.tdYear {
-  text-align: left; padding-left: 12px;
-  font-family: var(--mono); font-weight: 600; font-size: 12px; color: var(--text2);
-}
+.tdYear { text-align: left; padding-left: 12px; font-family: var(--mono); font-size: 12px; color: var(--text2); }
 tbody tr:hover .td, tbody tr:hover .tdYear { background: var(--surface2); }
 
-/* Tappable cells */
 .tappable { cursor: pointer; }
 .tappable:active { opacity: 0.75; }
 
-/* Cell states — bigger font for numbers */
-.paid    { color: var(--green);  font-size: 12px; }
-.partial { color: var(--yellow); font-size: 12px; }
-.missed  { color: var(--red);    font-size: 16px; font-weight: 700; }
-.future  { color: var(--border); }
+/* ── Cell colours ── */
+.paid    { color: #22c55e; }                          /* green */
+.partial { color: #f59e0b; font-weight: 700; }        /* amber/orange */
+.advance { color: #38bdf8; font-weight: 700; }        /* bright sky blue */
+.missed  { color: #ef4444; font-size: 16px; font-weight: 700; }  /* red ✗ */
+.dash    { color: var(--border); }
 .na      { color: var(--border); }
 .before  { color: var(--border); font-size: 10px; }
-.futureCell { font-size: 11px; color: var(--border); }
+.dashCell { font-size: 11px; color: var(--border); }
 
 /* ── Tooltip ── */
 .tooltip {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1a2035;
-  border: 1.5px solid var(--accent);
-  border-radius: 12px;
-  padding: 10px 13px;
-  min-width: 150px;
-  max-width: 210px;
+  position: absolute; left: 50%; transform: translateX(-50%);
+  background: #1a2035; border: 1.5px solid var(--accent);
+  border-radius: 12px; padding: 10px 13px;
+  min-width: 150px; max-width: 210px;
   z-index: 9999;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(59,130,246,0.15);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6);
   animation: popIn 0.15s cubic-bezier(.34,1.56,.64,1);
   white-space: nowrap;
 }
-
-/* Show ABOVE the cell (for lower rows) */
-.tooltipAbove {
-  bottom: calc(100% + 8px);
-  top: auto;
-}
-
-/* Show BELOW the cell (for top rows) */
-.tooltipBelow {
-  top: calc(100% + 8px);
-  bottom: auto;
-}
+.tooltipAbove { bottom: calc(100% + 8px); top: auto; }
+.tooltipBelow { top: calc(100% + 8px); bottom: auto; }
 
 @keyframes popIn {
   from { opacity: 0; transform: translateX(-50%) scale(0.88); }
   to   { opacity: 1; transform: translateX(-50%) scale(1); }
 }
 
-/* Arrow pointing down (tooltip above) */
 .arrowDown {
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
   width: 0; height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
+  border-left: 7px solid transparent; border-right: 7px solid transparent;
   border-top: 7px solid var(--accent);
 }
-
-/* Arrow pointing up (tooltip below) */
 .arrowUp {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  transform: translateX(-50%);
+  position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
   width: 0; height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
+  border-left: 7px solid transparent; border-right: 7px solid transparent;
   border-bottom: 7px solid var(--accent);
 }
 
-.tooltipHeader {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border);
-}
+.tooltipHeader { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
 .tooltipAmount { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--green); }
-.tooltipClose {
-  color: var(--text2); font-size: 11px; cursor: pointer;
-  padding: 2px 5px; border-radius: 4px; line-height: 1;
-}
+.tooltipClose { color: var(--text2); font-size: 11px; cursor: pointer; padding: 2px 5px; border-radius: 4px; }
 .tooltipClose:hover { color: var(--text); background: var(--border); }
-
-.tooltipLabel {
-  font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
-  color: var(--text2); margin-bottom: 7px;
-}
+.tooltipLabel { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); margin-bottom: 7px; }
 .tooltipNoReceipt { font-size: 11px; color: var(--text2); font-style: italic; }
 .tooltipReceipts { display: flex; flex-wrap: wrap; gap: 5px; }
-.receiptBadge {
-  background: rgba(59,130,246,0.15);
-  border: 1px solid rgba(59,130,246,0.35);
-  color: var(--accent);
-  font-family: var(--mono); font-size: 12px; font-weight: 700;
-  padding: 3px 9px; border-radius: 6px;
-}
+.receiptBadge { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.35); color: var(--accent); font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 6px; }
 
-.plotNote {
-  font-size: 12px; color: var(--yellow);
-  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2);
-  border-radius: 10px; padding: 10px 14px;
-}
+.plotNote { font-size: 12px; color: var(--yellow); background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 10px; padding: 10px 14px; }
 
-.loading {
-  display: flex; flex-direction: column; align-items: center;
-  justify-content: center; min-height: 60vh; gap: 12px; color: var(--text2); font-size: 14px;
-}
-.spinner {
-  width: 32px; height: 32px;
-  border: 3px solid var(--border); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin 0.8s linear infinite;
-}
+.loading { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 12px; color: var(--text2); font-size: 14px; }
+.spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
